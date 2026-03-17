@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>バランスゲーム（進化版）</title>
+<style>
+  body { margin: 0; background: #111; color: white; font-family: sans-serif; text-align: center; }
+  canvas { background: #222; display: block; margin: 0 auto; }
+  #info { padding: 10px; }
+</style>
+</head>
+<body>
+<div id="info">タップ / クリックでブロックを落とす（揺れ＋回転＋風あり）</div>
+<canvas id="game" width="300" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let blocks = [];
+let currentX = 0;
+let direction = 2;
+let dropping = false;
+let gameOver = false;
+let sway = 0;
+let swaySpeed = 0.02;
+let wind = 0;
+
+function drawBlock(x, y, angle=0, width=80, height=20) {
+  ctx.save();
+  ctx.translate(x + width/2, y + height/2);
+  ctx.rotate(angle);
+  ctx.fillStyle = "#4CAF50";
+  ctx.fillRect(-width/2, -height/2, width, height);
+  ctx.restore();
+}
+
+function update() {
+  if (gameOver) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 揺れ
+  sway += swaySpeed;
+  let swayOffset = Math.sin(sway) * (blocks.length * 2);
+
+  // 風（ランダム）
+  wind += (Math.random() - 0.5) * 0.5;
+  wind *= 0.9; // 減衰
+
+  let totalOffset = swayOffset + wind;
+
+  // 動くブロック
+  if (!dropping) {
+    currentX += direction;
+    if (currentX < 0 || currentX > canvas.width - 80) {
+      direction *= -1;
+    }
+  }
+
+  let y = canvas.height - (blocks.length + 1) * 20;
+  let angle = totalOffset * 0.01; // 傾き
+
+  drawBlock(currentX + totalOffset, y, angle);
+
+  // 積み上がり
+  blocks.forEach((b, i) => {
+    drawBlock(b.x + totalOffset, canvas.height - (i + 1) * 20, angle);
+  });
+
+  requestAnimationFrame(update);
+}
+
+canvas.addEventListener("click", () => {
+  if (gameOver) return;
+
+  if (!dropping) {
+    dropping = true;
+
+    let adjustedX = currentX + Math.sin(sway) * (blocks.length * 2) + wind;
+
+    if (blocks.length === 0) {
+      blocks.push({ x: adjustedX });
+    } else {
+      let last = blocks[blocks.length - 1];
+      let diff = Math.abs(last.x - adjustedX);
+
+      if (diff > 40) {
+        gameOver = true;
+        alert("ゲームオーバー！");
+        return;
+      }
+
+      blocks.push({ x: adjustedX });
+    }
+
+    currentX = 0;
+    direction = 2;
+    dropping = false;
+  }
+});
+
+update();
+</script>
+</body>
+</html>
